@@ -11,6 +11,8 @@ interface AppState {
   startup_enabled: boolean;
   csp_running: boolean;
   discord_connected: boolean;
+  button_label: string;
+  button_url: string;
 }
 
 export default function App() {
@@ -19,6 +21,8 @@ export default function App() {
   const [startupEnabled, setStartupEnabled] = useState(true);
   const [cspRunning, setCspRunning] = useState(false);
   const [discordConnected, setDiscordConnected] = useState(false);
+  const [buttonLabel, setButtonLabel] = useState("");
+  const [buttonUrl, setButtonUrl] = useState("");
   
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -34,6 +38,8 @@ export default function App() {
       setStartupEnabled(state.startup_enabled);
       setCspRunning(state.csp_running);
       setDiscordConnected(state.discord_connected);
+      setButtonLabel(state.button_label);
+      setButtonUrl(state.button_url);
     } catch (err) {
       console.error("Failed to fetch state:", err);
     }
@@ -61,7 +67,7 @@ export default function App() {
 
   const handleUpdate = async () => {
     try {
-      await invoke("update_rpc_config", { details, stateStr: statusText });
+      await invoke("update_rpc_config", { details, stateStr: statusText, buttonLabel, buttonUrl });
       setUpdateMessage("RPC UPDATED");
       setTimeout(() => setUpdateMessage(""), 2500);
     } catch (err) {
@@ -109,7 +115,7 @@ export default function App() {
   }
 
   return (
-    <div className="w-[400px] h-[520px] flex flex-col justify-between p-6 bg-[#0f0f0f] border border-[#222222] box-border overflow-hidden select-none text-white relative">
+    <div className="w-[400px] h-[640px] flex flex-col justify-between p-6 bg-[#0f0f0f] border border-[#222222] box-border overflow-hidden select-none text-white relative">
       {/* Custom Draggable Titlebar */}
       <div 
         data-tauri-drag-region 
@@ -222,6 +228,32 @@ export default function App() {
               value={statusText} 
               onChange={(e) => setStatusText(e.target.value)}
               placeholder="e.g. Commissions Open" 
+              className="bg-[#141414] border border-[#333333] text-white px-3 py-2 text-xs outline-none focus:border-[#f0f0f0] transition-colors duration-150 rounded-none w-full"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] uppercase font-bold tracking-wider text-[#888888]">
+              Button Label
+            </label>
+            <input 
+              type="text" 
+              value={buttonLabel} 
+              onChange={(e) => setButtonLabel(e.target.value)}
+              placeholder="e.g. Open My Instagram" 
+              className="bg-[#141414] border border-[#333333] text-white px-3 py-2 text-xs outline-none focus:border-[#f0f0f0] transition-colors duration-150 rounded-none w-full"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] uppercase font-bold tracking-wider text-[#888888]">
+              Button Link
+            </label>
+            <input 
+              type="text" 
+              value={buttonUrl} 
+              onChange={(e) => setButtonUrl(e.target.value)}
+              placeholder="e.g. Social Media Link" 
               className="bg-[#141414] border border-[#333333] text-white px-3 py-2 text-xs outline-none focus:border-[#f0f0f0] transition-colors duration-150 rounded-none w-full"
             />
           </div>

@@ -13,6 +13,8 @@ pub struct AppConfig {
     pub details: String,
     pub state: String,
     pub startup_enabled: bool,
+    pub button_label: String,
+    pub button_url: String,
 }
 
 impl Default for AppConfig {
@@ -21,6 +23,8 @@ impl Default for AppConfig {
             details: "Cooking something..".to_string(),
             state: "@soraa.aruto".to_string(),
             startup_enabled: true,
+            button_label: "Open in Github".to_string(),
+            button_url: "https://github.com/YukitanCore".to_string(),
         }
     }
 }
@@ -41,6 +45,8 @@ pub struct FrontendState {
     pub startup_enabled: bool,
     pub csp_running: bool,
     pub discord_connected: bool,
+    pub button_label: String,
+    pub button_url: String,
 }
 
 fn set_startup_registry(enabled: bool) -> std::io::Result<()> {
@@ -119,6 +125,8 @@ fn get_app_state(state: tauri::State<'_, AppState>) -> FrontendState {
         startup_enabled: config.startup_enabled,
         csp_running: *csp_running,
         discord_connected: *discord_connected,
+        button_label: config.button_label.clone(),
+        button_url: config.button_url.clone(),
     }
 }
 
@@ -126,11 +134,15 @@ fn get_app_state(state: tauri::State<'_, AppState>) -> FrontendState {
 fn update_rpc_config(
     details: String,
     state_str: String,
+    button_label: String,
+    button_url: String,
     state: tauri::State<'_, AppState>,
 ) -> Result<(), String> {
     let mut config = state.config.lock().unwrap();
     config.details = details;
     config.state = state_str;
+    config.button_label = button_label;
+    config.button_url = button_url;
     
     let config_json = serde_json::to_string_pretty(&*config).map_err(|e| e.to_string())?;
     std::fs::write(&state.config_path, config_json).map_err(|e| e.to_string())?;
@@ -301,12 +313,16 @@ pub fn run() {
                                         .large_image("https://github.com/YukitanCore/CSP-discordRPC/blob/main/CSPlogoAnimatedSORA.gif?raw=true")
                                         .large_text("CLIP STUDIO PAINT")
                                     );
-                                    
+                                     
                                 let act = if let Some(t) = timestamp {
                                     act.timestamps(activity::Timestamps::new().start(t))
                                 } else {
                                     act
                                 };
+                                
+                                let act = act.buttons(vec![
+                                    activity::Button::new(&config.button_label, &config.button_url)
+                                ]);
                                 
                                 if cli.set_activity(act).is_err() {
                                     let mut dc = state.discord_connected.lock().unwrap();

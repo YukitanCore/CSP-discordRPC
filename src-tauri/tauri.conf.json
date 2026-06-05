@@ -15,7 +15,7 @@
         "label": "main",
         "title": "CSP Discord RPC",
         "width": 400,
-        "height": 520,
+        "height": 640,
         "resizable": false,
         "decorations": false,
         "visible": true
@@ -28,6 +28,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "YukitanCore",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
