@@ -4,6 +4,7 @@
 
 # Clip Studio Paint Discord Rich Presence 
 <img src="CSPlogoAnimatedSORA.gif" width="64" height="64" alt="csp" align="right" />
+
 Show what you're working on in **Clip Studio Paint** on your Discord profile with a live elapsed timer. Automatically detects when CSP is running and sets your Discord status.
 <br>
 <br>
