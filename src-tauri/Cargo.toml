@@ -1,6 +1,6 @@
 [package]
 name = "csp-discord-rpc"
-version = "0.1.0"
+version = "1.1.0"
 description = "Automatic Discord Rich Presence integration for Clip Studio Paint. Detects CSP process and updates your status hands-free."
 authors = ["YukitanCore"]
 edition = "2021"
@@ -25,4 +25,6 @@ serde_json = "1"
 sysinfo = "0.30"
 discord-rich-presence = "0.2.4"
 winreg = "0.52"
+ureq = { version = "2", features = ["native-tls"] }
+tauri-plugin-single-instance = "2"
 

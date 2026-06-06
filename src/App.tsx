@@ -3,7 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { listen } from "@tauri-apps/api/event";
-import { Heart, MoreVertical } from "lucide-react";
+import { Heart, MoreVertical, Download } from "lucide-react";
 
 interface AppState {
   details: string;
@@ -13,6 +13,16 @@ interface AppState {
   discord_connected: boolean;
   button_label: string;
   button_url: string;
+}
+
+function isNewerVersion(latest: string, current: string): boolean {
+  const l = latest.replace(/^v/, "").split(".").map(Number);
+  const c = current.split(".").map(Number);
+  for (let i = 0; i < Math.max(l.length, c.length); i++) {
+    if ((l[i] || 0) > (c[i] || 0)) return true;
+    if ((l[i] || 0) < (c[i] || 0)) return false;
+  }
+  return false;
 }
 
 export default function App() {
@@ -25,10 +35,16 @@ export default function App() {
   const [buttonUrl, setButtonUrl] = useState("");
   
   const [showMenu, setShowMenu] = useState(false);
+  const [showSponsorMenu, setShowSponsorMenu] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [updateMessage, setUpdateMessage] = useState("");
+  const [appVersion, setAppVersion] = useState("");
+  const [updateInfo, setUpdateInfo] = useState<{ version: string; url: string } | null>(null);
+  const [updateState, setUpdateState] = useState<'idle' | 'downloading' | 'downloaded'>('idle');
+  const [downloadPath, setDownloadPath] = useState<string | null>(null);
 
   const menuRef = useRef<HTMLDivElement>(null);
+  const sponsorMenuRef = useRef<HTMLDivElement>(null);
 
   const fetchState = async () => {
     try {
@@ -48,6 +64,22 @@ export default function App() {
   useEffect(() => {
     fetchState();
 
+    (async () => {
+      try {
+        const version = await invoke<string>("get_app_version");
+        setAppVersion(version);
+        const res = await fetch("https://api.github.com/repos/YukitanCore/CSP-discordRPC/releases/latest");
+        const data = await res.json();
+        const tag = data.tag_name as string;
+        const asset = data.assets?.find((a: any) => a.name?.endsWith(".exe"));
+        if (asset && isNewerVersion(tag, version)) {
+          setUpdateInfo({ version: tag, url: asset.browser_download_url });
+        }
+      } catch (err) {
+        console.error("Update check failed:", err);
+      }
+    })();
+
     const unlistenPromise = listen("status-changed", () => {
       fetchState();
     });
@@ -55,6 +87,9 @@ export default function App() {
     const handleOutsideClick = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setShowMenu(false);
+      }
+      if (sponsorMenuRef.current && !sponsorMenuRef.current.contains(e.target as Node)) {
+        setShowSponsorMenu(false);
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -93,6 +128,28 @@ export default function App() {
     }
   };
 
+  const handleDownloadUpdate = async () => {
+    if (!updateInfo) return;
+    setUpdateState("downloading");
+    try {
+      const path = await invoke<string>("download_update", { url: updateInfo.url });
+      setDownloadPath(path);
+      setUpdateState("downloaded");
+    } catch (err) {
+      console.error("Download failed:", err);
+      setUpdateState("idle");
+    }
+  };
+
+  const handleRestart = async () => {
+    if (!downloadPath) return;
+    try {
+      await invoke("apply_update", { downloadPath });
+    } catch (err) {
+      console.error("Restart failed:", err);
+    }
+  };
+
   const handleMinimize = async () => {
     await getCurrentWindow().minimize();
   };
@@ -101,18 +158,8 @@ export default function App() {
     await getCurrentWindow().hide();
   };
 
-  let badgeText = "CSP not running";
-  let badgeColorClass = "bg-[#374151] text-white";
-
-  if (cspRunning) {
-    if (discordConnected) {
-      badgeText = "Connected";
-      badgeColorClass = "bg-[#10b981] text-black";
-    } else {
-      badgeText = "Disconnected";
-      badgeColorClass = "bg-[#f59e0b] text-black";
-    }
-  }
+  let badgeText = discordConnected ? "CONNECTED" : "NOT CONNECTED";
+  let badgeColorClass = discordConnected ? "bg-[#10b981] text-black" : "bg-[#374151] text-white";
 
   return (
     <div className="w-[400px] h-[640px] flex flex-col justify-between p-6 bg-[#0f0f0f] border border-[#222222] box-border overflow-hidden select-none text-white relative">
@@ -137,6 +184,23 @@ export default function App() {
 
         {/* Header Social Icons & 3-dot Menu */}
         <div className="flex items-center gap-4 relative" ref={menuRef}>
+          {/* Update Button */}
+          {updateInfo && (
+            <button
+              onClick={updateState === "downloaded" ? handleRestart : handleDownloadUpdate}
+              disabled={updateState === "downloading"}
+              className="flex items-center gap-1 text-[#888888] hover:text-white cursor-pointer transition-colors duration-150 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+              title={updateState === "downloaded" ? "Restart to apply update" : `Update to ${updateInfo.version}`}
+            >
+              {updateState === "downloading" ? (
+                <span className="text-[9px] font-bold tracking-wider animate-pulse">DL...</span>
+              ) : updateState === "downloaded" ? (
+                <span className="text-[9px] font-bold tracking-wider">Restart</span>
+              ) : (
+                <><Download className="w-3.5 h-3.5" /><span className="text-[9px] font-bold tracking-wider">Update</span></>
+              )}
+            </button>
+          )}
           {/* Discord Icon */}
           <button 
             onClick={() => openUrl("https://discord.gg/EC3s7yUHyj")}
@@ -159,14 +223,35 @@ export default function App() {
             </svg>
           </button>
 
-          {/* Heart / Donate Icon */}
-          <button 
-            onClick={() => openUrl("https://trakteer.id/scriptical/tip?quantity=10")}
-            className="text-[#888888] hover:text-[#ff4757] cursor-pointer transition-colors duration-150 outline-none"
-            title="Donate"
-          >
-            <Heart className="w-[18px] h-[18px]" />
-          </button>
+          {/* Sponsor / Donate Icon */}
+          <div className="relative" ref={sponsorMenuRef}>
+            <button 
+              onClick={() => setShowSponsorMenu(!showSponsorMenu)}
+              className="text-[#888888] hover:text-[#ff4757] cursor-pointer transition-colors duration-150 outline-none flex items-center"
+              title="Sponsor"
+            >
+              <Heart className="w-[18px] h-[18px]" />
+            </button>
+
+            {showSponsorMenu && (
+              <div className="absolute right-0 top-7 w-[140px] bg-[#141414] border border-[#333333] z-50 py-1">
+                <button 
+                  onClick={() => { setShowSponsorMenu(false); openUrl("https://ko-fi.com/yukitancore"); }}
+                  className="w-full text-left px-4 py-2 text-xs text-[#f0f0f0] hover:bg-[#1f1f1f] border-none outline-none cursor-pointer font-medium flex items-center gap-2"
+                >
+                  <img src="https://storage.ko-fi.com/cdn/brandasset/v2/kofi_symbol.png" alt="" className="w-4 h-4 object-contain" />
+                  Ko-fi
+                </button>
+                <button 
+                  onClick={() => { setShowSponsorMenu(false); openUrl("https://trakteer.id/scriptical/tip?quantity=10"); }}
+                  className="w-full text-left px-4 py-2 text-xs text-[#f0f0f0] hover:bg-[#1f1f1f] border-none outline-none cursor-pointer font-medium flex items-center gap-2"
+                >
+                  <img src="https://trakteer.id/favicon/favicon-32x32.png" alt="" className="w-4 h-4 object-contain" />
+                  Trakteer
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* 3-dot Menu Icon */}
           <button 
@@ -274,7 +359,8 @@ export default function App() {
             </div>
           )}
         </div>
-          <div className="text-center text-xs text-[#888888] mt-2">Created by YukitanCore | © 2026 All rights reserved.</div>
+          <div className="text-center text-[9px] text-[#555555] mt-2">Created by YukitanCore</div>
+          <div className="text-center text-[8px] text-[#444444] -mt-1">v{appVersion || "..."}</div>
       </div>
 
       {/* Footer Section with Toggle */}
