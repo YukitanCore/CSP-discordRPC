@@ -24,6 +24,9 @@ Show what you're working on in **Clip Studio Paint** on your Discord profile wit
   <img width="402" height="522" alt="CSPRPC GUI screenshot" src="https://github.com/user-attachments/assets/15075ea3-81e8-418c-82df-09138b8ca761" />
 </p>
 <p align="center">
+<img width="402" height="146" alt="RPC Showcase" src="https://github.com/user-attachments/assets/dfe4b881-37fe-4398-8230-05a9d9130cb7" />
+</p>
+<p align="center">
   <img width="800" height="85" alt="Getting Started" src="https://github.com/user-attachments/assets/b633c724-9a3e-4154-babe-2ced9b7b397b" />
 </p>
 
